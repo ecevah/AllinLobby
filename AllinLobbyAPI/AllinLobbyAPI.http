@@ -1,0 +1,6 @@
+@AllinLobbyAPI_HostAddress = http://localhost:5210
+
+GET {{AllinLobbyAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
