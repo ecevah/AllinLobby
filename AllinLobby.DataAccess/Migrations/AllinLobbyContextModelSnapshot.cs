@@ -166,7 +166,10 @@ namespace AllinLobby.DataAccess.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("ClientId")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("ClientId"));
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()

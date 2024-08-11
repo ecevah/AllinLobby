@@ -5,13 +5,18 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AllinLobby.DataAccess.Repositories
 {
-    public class GenericRepository<T>(AllinLobbyContext _context) : IRepository<T> where T : class
+    public class GenericRepository<T> : IRepository<T> where T : class
     {
+        private readonly AllinLobbyContext _context;
+
+        public GenericRepository(AllinLobbyContext context)
+        {
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+        }
+
         public DbSet<T> Table => _context.Set<T>();
 
         public int Count()
@@ -21,7 +26,9 @@ namespace AllinLobby.DataAccess.Repositories
 
         public void Create(T entity)
         {
-            if (entity == null) throw new ArgumentNullException(nameof(entity));
+            if (entity == null)
+                throw new ArgumentNullException(nameof(entity), "The entity to create cannot be null.");
+
             Table.Add(entity);
             _context.SaveChanges();
         }
@@ -29,33 +36,43 @@ namespace AllinLobby.DataAccess.Repositories
         public void Delete(int id)
         {
             var entity = Table.Find(id);
-            if (entity == null) throw new ArgumentNullException(nameof(entity));
+            if (entity == null)
+                throw new ArgumentNullException(nameof(entity), $"Entity with id {id} not found.");
+
             Table.Remove(entity);
             _context.SaveChanges();
         }
 
         public int FilteredCount(Expression<Func<T, bool>> predicate)
         {
-            if (predicate == null) throw new ArgumentNullException(nameof(predicate));
-            return Table.Where(predicate).Count();
+            if (predicate == null)
+                throw new ArgumentNullException(nameof(predicate), "Predicate cannot be null.");
+
+            return Table.Count(predicate);
         }
 
         public T GetByFiltered(Expression<Func<T, bool>> predicate)
         {
-            if (predicate == null) throw new ArgumentNullException(nameof(predicate));
-            return Table.Where(predicate).FirstOrDefault();
+            if (predicate == null)
+                throw new ArgumentNullException(nameof(predicate), "Predicate cannot be null.");
+
+            return Table.FirstOrDefault(predicate);
         }
 
         public T GetById(int id)
         {
             var entity = Table.Find(id);
-            if (entity == null) throw new ArgumentNullException(nameof(entity));
+            if (entity == null)
+                throw new ArgumentNullException(nameof(entity), $"Entity with id {id} not found.");
+
             return entity;
         }
 
         public List<T> GetFilteredList(Expression<Func<T, bool>> predicate)
         {
-            if (predicate == null) throw new ArgumentNullException(nameof(predicate));
+            if (predicate == null)
+                throw new ArgumentNullException(nameof(predicate), "Predicate cannot be null.");
+
             return Table.Where(predicate).ToList();
         }
 
@@ -66,7 +83,9 @@ namespace AllinLobby.DataAccess.Repositories
 
         public void Update(T entity)
         {
-            if (entity == null) throw new ArgumentNullException(nameof(entity));
+            if (entity == null)
+                throw new ArgumentNullException(nameof(entity), "The entity to update cannot be null.");
+
             Table.Update(entity);
             _context.SaveChanges();
         }

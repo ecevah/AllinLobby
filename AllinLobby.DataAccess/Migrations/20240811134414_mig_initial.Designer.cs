@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AllinLobby.DataAccess.Migrations
 {
     [DbContext(typeof(AllinLobbyContext))]
-    [Migration("20240811110311_mig_initial")]
+    [Migration("20240811134414_mig_initial")]
     partial class mig_initial
     {
         /// <inheritdoc />
@@ -169,7 +169,10 @@ namespace AllinLobby.DataAccess.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("ClientId")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("ClientId"));
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()

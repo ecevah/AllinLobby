@@ -24,4 +24,8 @@
     <ProjectReference Include="..\AllinLobby.DTO\AllinLobby.DTO.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="wwwroot\" />
+  </ItemGroup>
+
 </Project>

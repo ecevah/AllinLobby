@@ -87,6 +87,10 @@ namespace AllinLobby.DataAccess.Context
 
             // Client relationships
             modelBuilder.Entity<Client>()
+                .Property(c => c.ClientId)
+                .ValueGeneratedOnAdd();
+
+            modelBuilder.Entity<Client>()
                 .HasOne(c => c.Subscription)
                 .WithMany(s => s.Clients)
                 .HasForeignKey(c => c.SubscriptionId);
