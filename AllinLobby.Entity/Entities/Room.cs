@@ -20,7 +20,7 @@ namespace AllinLobby.Entity.Entities
         public List<Comment> Comments { get; set; } = new List<Comment>();
         public List<Complaint> Complaints { get; set; } = new List<Complaint>();
         public List<Reservation> Reservations { get; set; } = new List<Reservation>();
-        public DateTime CreateAt { get; set; } = DateTime.Now;
-        public DateTime UpdateAt { get; set; } = DateTime.Now;
+        public DateTime CreateAt { get; set; } = DateTime.UtcNow.AddHours(3);
+        public DateTime UpdateAt { get; set; } = DateTime.UtcNow.AddHours(3);
     }
 }

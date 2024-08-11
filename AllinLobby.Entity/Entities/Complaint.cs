@@ -25,6 +25,5 @@ namespace AllinLobby.Entity.Entities
         public DateTime CreateAt { get; set; } = DateTime.UtcNow.AddHours(3);
         public DateTime UpdateAt { get; set; } = DateTime.UtcNow.AddHours(3);
 
-
     }
 }

@@ -8,9 +8,9 @@ namespace AllinLobby.Entity.Enums
 {
     public enum OrderStatus
     {
-        OrderReceived,
-        Preparing,
-        Shipped,
-        Delivered
+        OrderReceived = 0,
+        Preparing = 1,
+        Shipped = 2,
+        Delivered = 3
     }
 }

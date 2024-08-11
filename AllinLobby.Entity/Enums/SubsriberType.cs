@@ -8,8 +8,9 @@ namespace AllinLobby.Entity.Enums
 {
     public enum SubsriberType
     {
-        Winter,
-        Summer,
-        Season
+        Winter = 0,
+        Summer = 1,
+        Season = 2,
+        Free = 3
     }
 }

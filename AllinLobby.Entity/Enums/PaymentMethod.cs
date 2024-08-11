@@ -8,9 +8,9 @@ namespace AllinLobby.Entity.Enums
 {
     public enum PaymentMethod
     {
-        CreditCard,
-        InstallmentCreditCard,
-        EFT,
-        MoneyOrder
+        CreditCard = 0, 
+        InstallmentCreditCard = 1,
+        EFT = 2,
+        MoneyOrder = 3
     }
 }

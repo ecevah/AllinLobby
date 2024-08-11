@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AllinLobby.Api.Controllers
 {
-    [Authorize]
+
     [Route("api/[controller]")]
     [ApiController]
     public class SubscriptionsController(IGenericService<Subscription> _subscriptionService, IMapper _mapper) : ControllerBase

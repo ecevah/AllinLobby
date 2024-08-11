@@ -8,8 +8,8 @@ namespace AllinLobby.Entity.Enums
 {
     public enum Device
     {
-        Unknown,
-        Mobile,
-        Desktop
+        Unknown = 0,
+        Mobile = 1,
+        Desktop = 2,
     }
 }

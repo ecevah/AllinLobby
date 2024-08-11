@@ -4,12 +4,17 @@ using AllinLobby.Entity.Entities;
 using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 namespace AllinLobby.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ClientsController(IGenericService<Client> _clientService, IMapper _mapper, UserManager<Client> _userManager, SignInManager<Client> _signInManager) : ControllerBase
+    public class ClientsController(IGenericService<Client> _clientService, IMapper _mapper, UserManager<Client> _userManager, SignInManager<Client> _signInManager, IConfiguration _configuration) : ControllerBase
     {
         [HttpPost("register")]
         public async Task<IActionResult> Register(CreateClientDto registerClientDto)
@@ -43,7 +48,20 @@ namespace AllinLobby.Api.Controllers
                 return BadRequest(response);
             }
 
-            var result = await _signInManager.PasswordSignInAsync(loginClientDto.Email, loginClientDto.Password, false, false);
+            var user = await _userManager.FindByEmailAsync(loginClientDto.Email);
+            if (user == null)
+            {
+                var response = new ApiResponse<string>(false, "User not found", null);
+                return NotFound(response);
+            }
+
+            var result = await _signInManager.PasswordSignInAsync(user, loginClientDto.Password, false, lockoutOnFailure: true);
+
+            if (result.IsLockedOut)
+            {
+                var response = new ApiResponse<string>(false, "Account locked out", null);
+                return Unauthorized(response);
+            }
 
             if (!result.Succeeded)
             {
@@ -51,9 +69,11 @@ namespace AllinLobby.Api.Controllers
                 return Unauthorized(response);
             }
 
-            var successResponse = new ApiResponse<string>(true, "Login successful", null);
+            var token = GenerateJWT(user);
+            var successResponse = new ApiResponse<object>(true, "Login successful", token);
             return Ok(successResponse);
         }
+
         [HttpGet]
         public IActionResult Get()
         {
@@ -128,6 +148,26 @@ namespace AllinLobby.Api.Controllers
 
             var successResponse = new ApiResponse<Client>(true, "Client updated successfully", updatedValue);
             return Ok(successResponse);
+        }
+
+        private object GenerateJWT(Client user)
+        {
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.ASCII.GetBytes(_configuration.GetSection("AppSettings:Secret").Value ?? "");
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(
+                    new Claim[] {
+                        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                        new Claim(ClaimTypes.Name, user.UserName ?? "")
+                    }
+                ),
+                Expires = DateTime.UtcNow.AddDays(1),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
+                Issuer = "ahmetecevit.com"
+            };
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            return tokenHandler.WriteToken(token);
         }
     }
 }
