@@ -147,8 +147,6 @@ namespace AllinLobby.Api.Controllers
             }
         }
 
-        //eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiIyIiwidW5pcXVlX25hbWUiOiJhaG1ldCIsIm5iZiI6MTcyMzM4NTE3MSwiZXhwIjoxNzIzNDcxNTcxLCJpYXQiOjE3MjMzODUxNzEsImlzcyI6ImFobWV0ZWNldml0LmNvbSJ9.Mai31H878ERmM_xVH69N1NoHXkkAagm03g7xQOee2mE
-
         private string SavePhoto(IFormFile photo)
         {
             var uploadsFolder = Path.Combine(_env.WebRootPath, "uploads");
