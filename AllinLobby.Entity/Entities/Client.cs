@@ -14,9 +14,9 @@ namespace AllinLobby.Entity.Entities
         public int SubscriptionId { get; set; }
         public Subscription Subscription { get; set; } = null!;
         public string Name { get; set; } = null!;
-        public int PersonalIdentification { get; set; }
+        public string PersonalIdentification { get; set; } = null!;
         public DateTime BirthDate { get; set; }
-        public int Phone { get; set; }
+        public string Phone { get; set; } = null!;
         public string Address { get; set; } = null!;
         public Sex Sex { get; set; }
         public bool Status { get; set; } = true;

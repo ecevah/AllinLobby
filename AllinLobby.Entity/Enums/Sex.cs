@@ -8,8 +8,8 @@ namespace AllinLobby.Entity.Enums
 {
     public enum Sex
     {
-        Male,
-        Female,
-        NotSpecified
+        Male = 0,
+        Female = 1,
+        NotSpecified = 2
     }
 }

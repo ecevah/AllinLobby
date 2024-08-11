@@ -25,7 +25,8 @@ namespace AllinLobby.Api.Controllers
 
             if (!result.Succeeded)
             {
-                var response = new ApiResponse<string>(false, "Registration failed");
+                var errorMessages = string.Join(", ", result.Errors.Select(e => e.Description));
+                var response = new ApiResponse<string>(false, $"Registration failed: {errorMessages}");
                 return BadRequest(response);
             }
 

@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AllinLobby.DataAccess.Migrations
 {
     [DbContext(typeof(AllinLobbyContext))]
-    [Migration("20240810134634_mig-initial")]
-    partial class miginitial
+    [Migration("20240811102325_mig_initial")]
+    partial class mig_initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -209,11 +209,13 @@ namespace AllinLobby.DataAccess.Migrations
                     b.Property<string>("PasswordHash")
                         .HasColumnType("text");
 
-                    b.Property<int>("PersonalIdentification")
-                        .HasColumnType("integer");
+                    b.Property<string>("PersonalIdentification")
+                        .IsRequired()
+                        .HasColumnType("text");
 
-                    b.Property<int>("Phone")
-                        .HasColumnType("integer");
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("PhoneNumber")
                         .HasColumnType("text");
