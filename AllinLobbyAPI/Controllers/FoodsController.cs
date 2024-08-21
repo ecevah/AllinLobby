@@ -1,44 +1,52 @@
 ﻿using AllinLobby.Bussiness.Abstract;
+using AllinLobby.DataAccess.Context;
 using AllinLobby.DTO.DTOs.FoodDtos;
 using AllinLobby.Entity.Entities;
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace AllinLobby.Api.Controllers
 {
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class FoodsController(IGenericService<Food> _foodService, IMapper _mapper, IWebHostEnvironment _env) : ControllerBase
+    public class FoodsController(IGenericService<Food> _foodService, IMapper _mapper, IWebHostEnvironment _env, AllinLobbyContext _context) : ControllerBase
     {
         [HttpGet]
         public IActionResult Get()
         {
-            var values = _foodService.TGetList();
-            var response = new ApiResponse<IEnumerable<Food>>(true, "Data retrieved successfully", values);
+            var foods = _context.Foods
+                                .Include(f => f.FoodCategory)  // Include related FoodCategory
+                                .ToList();
+
+            var response = new ApiResponse<IEnumerable<Food>>(true, "Data retrieved successfully", foods);
             return Ok(response);
         }
 
         [HttpGet("{id}")]
         public IActionResult GetById(int id)
         {
-            var value = _foodService.TGetById(id);
-            if (value == null)
+            var food = _context.Foods
+                               .Include(f => f.FoodCategory)  // Include related FoodCategory
+                               .FirstOrDefault(f => f.FoodId == id);
+
+            if (food == null)
             {
                 var response = new ApiResponse<Food>(false, "Food not found", null);
                 return NotFound(response);
             }
 
-            var successResponse = new ApiResponse<Food>(true, "Food retrieved successfully", value);
+            var successResponse = new ApiResponse<Food>(true, "Food retrieved successfully", food);
             return Ok(successResponse);
         }
 
         [HttpDelete("{id}")]
         public IActionResult Delete(int id)
         {
-            var value = _foodService.TGetById(id);
-            if (value == null)
+            var food = _foodService.TGetById(id);
+            if (food == null)
             {
                 var response = new ApiResponse<Food>(false, "Food not found", null);
                 return NotFound(response);
@@ -95,7 +103,6 @@ namespace AllinLobby.Api.Controllers
                 var photoPath = SavePhoto(updateFoodDto.Photo);
                 existingFood.PhotoPath = photoPath;
             }
-
 
             _foodService.TUpdate(existingFood);
 

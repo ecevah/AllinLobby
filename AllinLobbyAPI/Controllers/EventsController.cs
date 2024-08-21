@@ -1,44 +1,54 @@
 ﻿using AllinLobby.Bussiness.Abstract;
+using AllinLobby.DataAccess.Context;
 using AllinLobby.DTO.DTOs.EventDtos;
 using AllinLobby.Entity.Entities;
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace AllinLobby.Api.Controllers
 {
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class EventsController(IGenericService<Event> _eventService, IMapper _mapper, IWebHostEnvironment _env) : ControllerBase
+    public class EventsController(IGenericService<Event> _eventService, IMapper _mapper, IWebHostEnvironment _env, AllinLobbyContext _context) : ControllerBase
     {
         [HttpGet]
         public IActionResult Get()
         {
-            var values = _eventService.TGetList();
-            var response = new ApiResponse<IEnumerable<Event>>(true, "Data retrieved successfully", values);
+            var events = _context.Events
+                                 .Include(e => e.Hotel)  // Include related Hotel
+                                 .Include(e => e.BookingEvents)  // Include related BookingEvents
+                                 .ToList();
+
+            var response = new ApiResponse<IEnumerable<Event>>(true, "Data retrieved successfully", events);
             return Ok(response);
         }
 
         [HttpGet("{id}")]
         public IActionResult GetById(int id)
         {
-            var value = _eventService.TGetById(id);
-            if (value == null)
+            var eventItem = _context.Events
+                                    .Include(e => e.Hotel)  // Include related Hotel
+                                    .Include(e => e.BookingEvents)  // Include related BookingEvents
+                                    .FirstOrDefault(e => e.EventId == id);
+
+            if (eventItem == null)
             {
                 var response = new ApiResponse<Event>(false, "Event not found", null);
                 return NotFound(response);
             }
 
-            var successResponse = new ApiResponse<Event>(true, "Event retrieved successfully", value);
+            var successResponse = new ApiResponse<Event>(true, "Event retrieved successfully", eventItem);
             return Ok(successResponse);
         }
 
         [HttpDelete("{id}")]
         public IActionResult Delete(int id)
         {
-            var value = _eventService.TGetById(id);
-            if (value == null)
+            var eventItem = _eventService.TGetById(id);
+            if (eventItem == null)
             {
                 var response = new ApiResponse<Event>(false, "Event not found", null);
                 return NotFound(response);
@@ -107,9 +117,11 @@ namespace AllinLobby.Api.Controllers
         {
             try
             {
-                var events = _eventService.TGetList()
-                    .Where(e => e.HotelId == hotelId)
-                    .ToList();
+                var events = _context.Events
+                                     .Include(e => e.Hotel)  // Include related Hotel
+                                     .Include(e => e.BookingEvents)  // Include related BookingEvents
+                                     .Where(e => e.HotelId == hotelId)
+                                     .ToList();
 
                 if (events.Any())
                 {
@@ -127,7 +139,7 @@ namespace AllinLobby.Api.Controllers
                     {
                         status = true,
                         message = "No events found for this hotel",
-                        events = new List<Event>() // Boş bir liste döndürülüyor
+                        events = new List<Event>() // Returning an empty list
                     };
                     return Ok(response);
                 }
@@ -142,7 +154,6 @@ namespace AllinLobby.Api.Controllers
                 return StatusCode(500, errorResponse); // 500 Internal Server Error
             }
         }
-
 
         private string SavePhoto(IFormFile photo)
         {

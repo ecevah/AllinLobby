@@ -1,44 +1,52 @@
 ﻿using AllinLobby.Bussiness.Abstract;
+using AllinLobby.DataAccess.Context;
 using AllinLobby.DTO.DTOs.LocationDtos;
 using AllinLobby.Entity.Entities;
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace AllinLobby.Api.Controllers
 {
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class LocationsController(IGenericService<Location> _locationService, IMapper _mapper, IWebHostEnvironment _env) : ControllerBase
+    public class LocationsController(IGenericService<Location> _locationService, IMapper _mapper, IWebHostEnvironment _env, AllinLobbyContext _context) : ControllerBase
     {
         [HttpGet]
         public IActionResult Get()
         {
-            var values = _locationService.TGetList();
-            var response = new ApiResponse<IEnumerable<Location>>(true, "Data retrieved successfully", values);
+            var locations = _context.Locations
+                                     .Include(l => l.Hotel) // Include related Hotel
+                                     .ToList();
+
+            var response = new ApiResponse<IEnumerable<Location>>(true, "Data retrieved successfully", locations);
             return Ok(response);
         }
 
         [HttpGet("{id}")]
         public IActionResult GetById(int id)
         {
-            var value = _locationService.TGetById(id);
-            if (value == null)
+            var location = _context.Locations
+                                    .Include(l => l.Hotel) // Include related Hotel
+                                    .FirstOrDefault(l => l.LocationId == id);
+
+            if (location == null)
             {
                 var response = new ApiResponse<Location>(false, "Location not found", null);
                 return NotFound(response);
             }
 
-            var successResponse = new ApiResponse<Location>(true, "Location retrieved successfully", value);
+            var successResponse = new ApiResponse<Location>(true, "Location retrieved successfully", location);
             return Ok(successResponse);
         }
 
         [HttpDelete("{id}")]
         public IActionResult Delete(int id)
         {
-            var value = _locationService.TGetById(id);
-            if (value == null)
+            var location = _locationService.TGetById(id);
+            if (location == null)
             {
                 var response = new ApiResponse<Location>(false, "Location not found", null);
                 return NotFound(response);
@@ -107,9 +115,10 @@ namespace AllinLobby.Api.Controllers
         {
             try
             {
-                var locations = _locationService.TGetList()
-                    .Where(l => l.HotelId == hotelId)
-                    .ToList();
+                var locations = _context.Locations
+                                        .Include(l => l.Hotel) // Include related Hotel
+                                        .Where(l => l.HotelId == hotelId)
+                                        .ToList();
 
                 if (locations.Any())
                 {
@@ -127,7 +136,7 @@ namespace AllinLobby.Api.Controllers
                     {
                         status = true,
                         message = "No locations found for this hotel",
-                        locations = new List<Location>() // Boş bir liste döndürülüyor
+                        locations = new List<Location>() // Return an empty list
                     };
                     return Ok(response);
                 }
@@ -142,7 +151,6 @@ namespace AllinLobby.Api.Controllers
                 return StatusCode(500, errorResponse); // 500 Internal Server Error
             }
         }
-
 
         private string SavePhoto(IFormFile photo)
         {

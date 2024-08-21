@@ -1,21 +1,29 @@
 ﻿using AllinLobby.Bussiness.Abstract;
+using AllinLobby.DataAccess.Context;
 using AllinLobby.DTO.DTOs.CommentDtos;
 using AllinLobby.Entity.Entities;
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace AllinLobby.Api.Controllers
 {
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class CommentsController(IGenericService<Comment> _commentService, IMapper _mapper) : ControllerBase
+    public class CommentsController(IGenericService<Comment> _commentService, IMapper _mapper, AllinLobbyContext _context) : ControllerBase
     {
         [HttpGet]
         public IActionResult Get()
         {
-            var values = _commentService.TGetList();
+            var values = _context.Comments
+                                 .Include(c => c.Client)
+                                 .Include(c => c.Hotel)
+                                 .Include(c => c.Room)
+                                 .Include(c => c.Reservation)
+                                 .ToList();
+
             var response = new ApiResponse<IEnumerable<Comment>>(true, "Data retrieved successfully", values);
             return Ok(response);
         }
@@ -23,7 +31,13 @@ namespace AllinLobby.Api.Controllers
         [HttpGet("{id}")]
         public IActionResult GetById(int id)
         {
-            var value = _commentService.TGetById(id);
+            var value = _context.Comments
+                                .Include(c => c.Client)
+                                .Include(c => c.Hotel)
+                                .Include(c => c.Room)
+                                .Include(c => c.Reservation)
+                                .FirstOrDefault(c => c.CommentId == id);
+
             if (value == null)
             {
                 var response = new ApiResponse<Comment>(false, "Comment not found", null);

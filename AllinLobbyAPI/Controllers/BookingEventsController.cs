@@ -4,18 +4,23 @@ using AllinLobby.Entity.Entities;
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace AllinLobby.Api.Controllers
 {
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class BookingEventsController(IGenericService<BookingEvent> _bookingEventService, IMapper _mapper) : ControllerBase
+    public class BookingEventsController(IGenericService<BookingEvent> _bookingEventService, IMapper _mapper, DbContext _context) : ControllerBase
     {
         [HttpGet]
         public IActionResult Get()
         {
-            var values = _bookingEventService.TGetList();
+            var values = _context.Set<BookingEvent>()
+                                 .Include(be => be.Client) // Assuming BookingEvent has a related Client entity
+                                 .Include(be => be.Event) // Include other related entities if needed
+                                 .ToList();
+
             var response = new ApiResponse<IEnumerable<BookingEvent>>(true, "Data retrieved successfully", values);
             return Ok(response);
         }
@@ -23,7 +28,11 @@ namespace AllinLobby.Api.Controllers
         [HttpGet("{id}")]
         public IActionResult GetById(int id)
         {
-            var value = _bookingEventService.TGetById(id);
+            var value = _context.Set<BookingEvent>()
+                                .Include(be => be.Client) // Include related entities
+                                .Include(be => be.Event) // Include other related entities if needed
+                                .FirstOrDefault(be => be.BookingEventId == id);
+
             if (value == null)
             {
                 var response = new ApiResponse<BookingEvent>(false, "Booking event not found", null);
@@ -93,9 +102,11 @@ namespace AllinLobby.Api.Controllers
         {
             try
             {
-                var events = _bookingEventService.TGetList()
-                    .Where(e => e.ClientId == clientId)
-                    .ToList();
+                var events = _context.Set<BookingEvent>()
+                                     .Include(be => be.Client) // Include related entities
+                                     .Include(be => be.Event) // Include other related entities if needed
+                                     .Where(e => e.ClientId == clientId)
+                                     .ToList();
 
                 if (events.Any())
                 {
@@ -128,7 +139,5 @@ namespace AllinLobby.Api.Controllers
                 return StatusCode(500, errorResponse);
             }
         }
-        
-
     }
 }

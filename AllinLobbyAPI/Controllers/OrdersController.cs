@@ -1,16 +1,19 @@
 ﻿using AllinLobby.Bussiness.Abstract;
+using AllinLobby.DataAccess.Context;
 using AllinLobby.DTO.DTOs.OrderDtos;
 using AllinLobby.Entity.Entities;
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace AllinLobby.Api.Controllers
 {
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class OrdersController(IGenericService<Order> _orderService, IMapper _mapper, IGenericService<OrderDetail> _orderDetailService) : ControllerBase
+    public class OrdersController(IGenericService<Order> _orderService, IMapper _mapper, IGenericService<OrderDetail> _orderDetailService, AllinLobbyContext _context, ILogger<OrdersController> _logger) : ControllerBase
     {
         [HttpGet]
         public IActionResult Get()
@@ -100,45 +103,50 @@ namespace AllinLobby.Api.Controllers
                 });
             }
 
-            try
+            using (var transaction = _context.Database.BeginTransaction())
             {
-                // Order'ı oluştur
-                var newOrder = _mapper.Map<Order>(createOrderDto);
-                newOrder.CreateAt = DateTime.UtcNow.AddHours(3);
-                newOrder.UpdateAt = DateTime.UtcNow.AddHours(3);
-
-                _orderService.TCreate(newOrder);
-
-                // Order ID'yi kullanarak OrderDetail'ları oluştur
-                foreach (var orderDetailDto in createOrderDto.OrderDetails)
+                try
                 {
-                    var newOrderDetail = _mapper.Map<OrderDetail>(orderDetailDto);
-                    newOrderDetail.OrderId = newOrder.OrderId; // Oluşturulan Order ID'sini atıyoruz
-                    newOrderDetail.CreateAt = DateTime.UtcNow.AddHours(3);
-                    newOrderDetail.UpdateAt = DateTime.UtcNow.AddHours(3);
+                    var newOrder = _mapper.Map<Order>(createOrderDto);
+                    newOrder.CreateAt = DateTime.UtcNow.AddHours(3);
+                    newOrder.UpdateAt = DateTime.UtcNow.AddHours(3);
 
-                    _orderDetailService.TCreate(newOrderDetail);
+                    _orderService.TCreate(newOrder);
+
+                    foreach (var orderDetailDto in createOrderDto.OrderDetails)
+                    {
+                        var newOrderDetail = _mapper.Map<OrderDetail>(orderDetailDto);
+                        newOrderDetail.OrderId = newOrder.OrderId;
+                        newOrderDetail.CreateAt = DateTime.UtcNow.AddHours(3);
+                        newOrderDetail.UpdateAt = DateTime.UtcNow.AddHours(3);
+
+                        _orderDetailService.TCreate(newOrderDetail);
+                    }
+
+                    transaction.Commit();
+
+                    var response = new
+                    {
+                        status = true,
+                        message = "Order and order details created successfully",
+                        orderId = newOrder.OrderId
+                    };
+
+                    return Ok(response);
                 }
-
-                var response = new
+                catch (Exception ex)
                 {
-                    status = true,
-                    message = "Order and order details created successfully",
-                    orderId = newOrder.OrderId
-                };
+                    _logger.LogError(ex, "An error occurred while creating order with details");
+                    transaction.Rollback();
 
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                var errorResponse = new
-                {
-                    status = false,
-                    message = $"An error occurred: {ex.Message}"
-                };
-                return StatusCode(500, errorResponse); // 500 Internal Server Error
+                    var errorResponse = new
+                    {
+                        status = false,
+                        message = $"An error occurred: {ex.Message}"
+                    };
+                    return StatusCode(500, errorResponse);
+                }
             }
         }
-
     }
 }

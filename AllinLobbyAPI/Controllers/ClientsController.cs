@@ -1,9 +1,11 @@
 ﻿using AllinLobby.Bussiness.Abstract;
+using AllinLobby.DataAccess.Context;
 using AllinLobby.DTO.DTOs.ClientDtos;
 using AllinLobby.Entity.Entities;
 using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -14,7 +16,7 @@ namespace AllinLobby.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ClientsController(IGenericService<Client> _clientService, IMapper _mapper, UserManager<Client> _userManager, SignInManager<Client> _signInManager, IConfiguration _configuration) : ControllerBase
+    public class ClientsController(IGenericService<Client> _clientService, IMapper _mapper, UserManager<Client> _userManager, SignInManager<Client> _signInManager, IConfiguration _configuration, AllinLobbyContext _context) : ControllerBase
     {
         [HttpPost("register")]
         public async Task<IActionResult> Register(CreateClientDto registerClientDto)
@@ -77,7 +79,16 @@ namespace AllinLobby.Api.Controllers
         [HttpGet]
         public IActionResult Get()
         {
-            var values = _clientService.TGetList();
+            var values = _context.Clients
+                                .Include(c => c.BookingEvents)
+                                .Include(c => c.Comments)
+                                .Include(c => c.Complaints)
+                                .Include(c => c.Guests)
+                                .Include(c => c.Orders)
+                                .Include(c => c.Reservations)
+                                .Include(c => c.Sessions)
+                                .ToList();
+
             var response = new ApiResponse<IEnumerable<Client>>(true, "Data retrieved successfully", values);
             return Ok(response);
         }
@@ -85,7 +96,16 @@ namespace AllinLobby.Api.Controllers
         [HttpGet("{id}")]
         public IActionResult GetById(int id)
         {
-            var value = _clientService.TGetById(id);
+            var value = _context.Clients
+                                .Include(c => c.BookingEvents)
+                                .Include(c => c.Comments)
+                                .Include(c => c.Complaints)
+                                .Include(c => c.Guests)
+                                .Include(c => c.Orders)
+                                .Include(c => c.Reservations)
+                                .Include(c => c.Sessions)
+                                .FirstOrDefault(c => c.ClientId == id);
+
             if (value == null)
             {
                 var response = new ApiResponse<Client>(false, "Client not found", null);

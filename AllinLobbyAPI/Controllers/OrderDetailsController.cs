@@ -1,21 +1,27 @@
 ﻿using AllinLobby.Bussiness.Abstract;
+using AllinLobby.DataAccess.Context;
 using AllinLobby.DTO.DTOs.OrderDetailDtos;
 using AllinLobby.Entity.Entities;
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace AllinLobby.Api.Controllers
 {
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class OrderDetailsController(IGenericService<OrderDetail> _orderDetailService, IMapper _mapper) : ControllerBase
+    public class OrderDetailsController(IGenericService<OrderDetail> _orderDetailService, IMapper _mapper, AllinLobbyContext _context) : ControllerBase
     {
         [HttpGet]
         public IActionResult Get()
         {
-            var values = _orderDetailService.TGetList();
+            var values = _context.OrderDetails
+                                 .Include(od => od.Order)   // Eager load related Order entity
+                                 .Include(od => od.Food)    // Eager load related Food entity
+                                 .ToList();
+
             var response = new ApiResponse<IEnumerable<OrderDetail>>(true, "Data retrieved successfully", values);
             return Ok(response);
         }
@@ -23,7 +29,11 @@ namespace AllinLobby.Api.Controllers
         [HttpGet("{id}")]
         public IActionResult GetById(int id)
         {
-            var value = _orderDetailService.TGetById(id);
+            var value = _context.OrderDetails
+                                .Include(od => od.Order)   // Eager load related Order entity
+                                .Include(od => od.Food)    // Eager load related Food entity
+                                .FirstOrDefault(od => od.OrderDetailId == id);
+
             if (value == null)
             {
                 var response = new ApiResponse<OrderDetail>(false, "Order detail not found", null);

@@ -1,44 +1,54 @@
 ﻿using AllinLobby.Bussiness.Abstract;
+using AllinLobby.DataAccess.Context;
 using AllinLobby.DTO.DTOs.GuestDtos;
 using AllinLobby.Entity.Entities;
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace AllinLobby.Api.Controllers
 {
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class GuestsController(IGenericService<Guest> _guestService, IMapper _mapper) : ControllerBase
+    public class GuestsController(IGenericService<Guest> _guestService, IMapper _mapper, AllinLobbyContext _context) : ControllerBase
     {
         [HttpGet]
         public IActionResult Get()
         {
-            var values = _guestService.TGetList();
-            var response = new ApiResponse<IEnumerable<Guest>>(true, "Data retrieved successfully", values);
+            var guests = _context.Guests
+                                 .Include(g => g.Client)       // Include related Client
+                                 .Include(g => g.Reservation)  // Include related Reservation
+                                 .ToList();
+
+            var response = new ApiResponse<IEnumerable<Guest>>(true, "Data retrieved successfully", guests);
             return Ok(response);
         }
 
         [HttpGet("{id}")]
         public IActionResult GetById(int id)
         {
-            var value = _guestService.TGetById(id);
-            if (value == null)
+            var guest = _context.Guests
+                                .Include(g => g.Client)       // Include related Client
+                                .Include(g => g.Reservation)  // Include related Reservation
+                                .FirstOrDefault(g => g.GuestId == id);
+
+            if (guest == null)
             {
                 var response = new ApiResponse<Guest>(false, "Guest not found", null);
                 return NotFound(response);
             }
 
-            var successResponse = new ApiResponse<Guest>(true, "Guest retrieved successfully", value);
+            var successResponse = new ApiResponse<Guest>(true, "Guest retrieved successfully", guest);
             return Ok(successResponse);
         }
 
         [HttpDelete("{id}")]
         public IActionResult Delete(int id)
         {
-            var value = _guestService.TGetById(id);
-            if (value == null)
+            var guest = _guestService.TGetById(id);
+            if (guest == null)
             {
                 var response = new ApiResponse<Guest>(false, "Guest not found", null);
                 return NotFound(response);
@@ -58,10 +68,10 @@ namespace AllinLobby.Api.Controllers
                 return BadRequest(response);
             }
 
-            var newValue = _mapper.Map<Guest>(createGuestDto);
-            _guestService.TCreate(newValue);
+            var newGuest = _mapper.Map<Guest>(createGuestDto);
+            _guestService.TCreate(newGuest);
 
-            var successResponse = new ApiResponse<Guest>(true, "Guest created successfully", newValue);
+            var successResponse = new ApiResponse<Guest>(true, "Guest created successfully", newGuest);
             return Ok(successResponse);
         }
 
@@ -81,10 +91,10 @@ namespace AllinLobby.Api.Controllers
                 return NotFound(response);
             }
 
-            var updatedValue = _mapper.Map(updateGuestDto, existingGuest);
-            _guestService.TUpdate(updatedValue);
+            var updatedGuest = _mapper.Map(updateGuestDto, existingGuest);
+            _guestService.TUpdate(updatedGuest);
 
-            var successResponse = new ApiResponse<Guest>(true, "Guest updated successfully", updatedValue);
+            var successResponse = new ApiResponse<Guest>(true, "Guest updated successfully", updatedGuest);
             return Ok(successResponse);
         }
     }

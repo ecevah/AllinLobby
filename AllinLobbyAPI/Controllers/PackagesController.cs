@@ -4,49 +4,71 @@ using AllinLobby.Entity.Entities;
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace AllinLobby.Api.Controllers
 {
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class PackagesController(IGenericService<Package> _packageService, IMapper _mapper) : ControllerBase
+    public class PackagesController(IGenericService<Package> _packageService, IMapper _mapper, ILogger<PackagesController> _logger) : ControllerBase
     {
         [HttpGet]
         public IActionResult Get()
         {
-            var values = _packageService.TGetList();
-            var response = new ApiResponse<IEnumerable<Package>>(true, "Data retrieved successfully", values);
-            return Ok(response);
+            try
+            {
+                var values = _packageService.TGetList();
+                var response = new ApiResponse<IEnumerable<Package>>(true, "Data retrieved successfully", values);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while retrieving packages");
+                return StatusCode(500, new ApiResponse<string>(false, "An error occurred while retrieving data"));
+            }
         }
 
         [HttpGet("{id}")]
         public IActionResult GetById(int id)
         {
-            var value = _packageService.TGetById(id);
-            if (value == null)
+            try
             {
-                var response = new ApiResponse<Package>(false, "Package not found", null);
-                return NotFound(response);
-            }
+                var value = _packageService.TGetById(id);
+                if (value == null)
+                {
+                    return NotFound(new ApiResponse<Package>(false, "Package not found"));
+                }
 
-            var successResponse = new ApiResponse<Package>(true, "Package retrieved successfully", value);
-            return Ok(successResponse);
+                var successResponse = new ApiResponse<Package>(true, "Package retrieved successfully", value);
+                return Ok(successResponse);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while retrieving package with ID {id}");
+                return StatusCode(500, new ApiResponse<string>(false, "An error occurred while retrieving data"));
+            }
         }
 
         [HttpDelete("{id}")]
         public IActionResult Delete(int id)
         {
-            var value = _packageService.TGetById(id);
-            if (value == null)
+            try
             {
-                var response = new ApiResponse<Package>(false, "Package not found", null);
-                return NotFound(response);
-            }
+                var value = _packageService.TGetById(id);
+                if (value == null)
+                {
+                    return NotFound(new ApiResponse<Package>(false, "Package not found"));
+                }
 
-            _packageService.TDelete(id);
-            var successResponse = new ApiResponse<string>(true, "Package deleted successfully", null);
-            return Ok(successResponse);
+                _packageService.TDelete(id);
+                return Ok(new ApiResponse<string>(true, "Package deleted successfully"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while deleting package with ID {id}");
+                return StatusCode(500, new ApiResponse<string>(false, "An error occurred while deleting data"));
+            }
         }
 
         [HttpPost]
@@ -54,15 +76,22 @@ namespace AllinLobby.Api.Controllers
         {
             if (createPackageDto == null)
             {
-                var response = new ApiResponse<Package>(false, "Invalid package data", null);
-                return BadRequest(response);
+                return BadRequest(new ApiResponse<Package>(false, "Invalid package data"));
             }
 
-            var newValue = _mapper.Map<Package>(createPackageDto);
-            _packageService.TCreate(newValue);
+            try
+            {
+                var newValue = _mapper.Map<Package>(createPackageDto);
+                _packageService.TCreate(newValue);
 
-            var successResponse = new ApiResponse<Package>(true, "Package created successfully", newValue);
-            return Ok(successResponse);
+                var successResponse = new ApiResponse<Package>(true, "Package created successfully", newValue);
+                return Ok(successResponse);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while creating a new package");
+                return StatusCode(500, new ApiResponse<string>(false, "An error occurred while creating data"));
+            }
         }
 
         [HttpPut("{id}")]
@@ -70,22 +99,28 @@ namespace AllinLobby.Api.Controllers
         {
             if (updatePackageDto == null)
             {
-                var response = new ApiResponse<Package>(false, "Invalid package data", null);
-                return BadRequest(response);
+                return BadRequest(new ApiResponse<Package>(false, "Invalid package data"));
             }
 
-            var existingPackage = _packageService.TGetById(id);
-            if (existingPackage == null)
+            try
             {
-                var response = new ApiResponse<Package>(false, "Package not found", null);
-                return NotFound(response);
+                var existingPackage = _packageService.TGetById(id);
+                if (existingPackage == null)
+                {
+                    return NotFound(new ApiResponse<Package>(false, "Package not found"));
+                }
+
+                var updatedValue = _mapper.Map(updatePackageDto, existingPackage);
+                _packageService.TUpdate(updatedValue);
+
+                var successResponse = new ApiResponse<Package>(true, "Package updated successfully", updatedValue);
+                return Ok(successResponse);
             }
-
-            var updatedValue = _mapper.Map(updatePackageDto, existingPackage);
-            _packageService.TUpdate(updatedValue);
-
-            var successResponse = new ApiResponse<Package>(true, "Package updated successfully", updatedValue);
-            return Ok(successResponse);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while updating package with ID {id}");
+                return StatusCode(500, new ApiResponse<string>(false, "An error occurred while updating data"));
+            }
         }
 
         [HttpGet("GetPackagesByHotel/{hotelId}")]
@@ -97,35 +132,16 @@ namespace AllinLobby.Api.Controllers
                     .Where(p => p.HotelId == hotelId)
                     .ToList();
 
-                if (packages.Any())
-                {
-                    var response = new
-                    {
-                        status = true,
-                        message = "Packages found",
-                        packages = packages
-                    };
-                    return Ok(response);
-                }
-                else
-                {
-                    var response = new
-                    {
-                        status = true,
-                        message = "No packages found for this hotel",
-                        packages = new List<Package>() 
-                    };
-                    return Ok(response);
-                }
+                var response = packages.Any()
+                    ? new ApiResponse<IEnumerable<Package>>(true, "Packages found", packages)
+                    : new ApiResponse<IEnumerable<Package>>(true, "No packages found for this hotel", new List<Package>());
+
+                return Ok(response);
             }
             catch (Exception ex)
             {
-                var errorResponse = new
-                {
-                    status = false,
-                    message = $"An error occurred: {ex.Message}"
-                };
-                return StatusCode(500, errorResponse);
+                _logger.LogError(ex, $"An error occurred while retrieving packages for hotel ID {hotelId}");
+                return StatusCode(500, new ApiResponse<string>(false, "An error occurred while retrieving data"));
             }
         }
     }

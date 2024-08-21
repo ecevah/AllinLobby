@@ -4,18 +4,24 @@ using AllinLobby.Entity.Entities;
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace AllinLobby.Api.Controllers
 {
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class CleaningRoomsController(IGenericService<CleaningRoom> _cleaningRoomService, IMapper _mapper) : ControllerBase
+    public class CleaningRoomsController(IGenericService<CleaningRoom> _cleaningRoomService, IMapper _mapper, DbContext _context) : ControllerBase
     {
         [HttpGet]
         public IActionResult Get()
         {
-            var values = _cleaningRoomService.TGetList();
+            // Including related data such as RoomDetails and CleaningSchedule
+            var values = _context.Set<CleaningRoom>()
+                                 .Include(cr => cr.Hotel)      // Assuming a CleaningRoom has RoomDetails
+                                 .Include(cr => cr.Room) // Assuming a CleaningRoom has a CleaningSchedule
+                                 .ToList();
+
             var response = new ApiResponse<IEnumerable<CleaningRoom>>(true, "Data retrieved successfully", values);
             return Ok(response);
         }
@@ -23,7 +29,12 @@ namespace AllinLobby.Api.Controllers
         [HttpGet("{id}")]
         public IActionResult GetById(int id)
         {
-            var value = _cleaningRoomService.TGetById(id);
+            // Including related data for a specific CleaningRoom
+            var value = _context.Set<CleaningRoom>()
+                                .Include(cr => cr.Hotel)
+                                .Include(cr => cr.Room)
+                                .FirstOrDefault(cr => cr.CleaningRoomId == id);
+
             if (value == null)
             {
                 var response = new ApiResponse<CleaningRoom>(false, "Cleaning room not found", null);

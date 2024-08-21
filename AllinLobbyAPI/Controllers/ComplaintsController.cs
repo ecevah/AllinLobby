@@ -1,21 +1,28 @@
 ﻿using AllinLobby.Bussiness.Abstract;
+using AllinLobby.DataAccess.Context;
 using AllinLobby.DTO.DTOs.ComplaintDtos;
 using AllinLobby.Entity.Entities;
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace AllinLobby.Api.Controllers
 {
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class ComplaintsController(IGenericService<Complaint> _complaintService, IMapper _mapper) : ControllerBase
+    public class ComplaintsController(IGenericService<Complaint> _complaintService, IMapper _mapper, AllinLobbyContext _context) : ControllerBase
     {
         [HttpGet]
         public IActionResult Get()
         {
-            var values = _complaintService.TGetList();
+            var values = _context.Complaints
+                                 .Include(c => c.Client)
+                                 .Include(c => c.Hotel)
+                                 .Include(c => c.Room)
+                                 .ToList();
+
             var response = new ApiResponse<IEnumerable<Complaint>>(true, "Data retrieved successfully", values);
             return Ok(response);
         }
@@ -23,7 +30,12 @@ namespace AllinLobby.Api.Controllers
         [HttpGet("{id}")]
         public IActionResult GetById(int id)
         {
-            var value = _complaintService.TGetById(id);
+            var value = _context.Complaints
+                                .Include(c => c.Client)
+                                .Include(c => c.Hotel)
+                                .Include(c => c.Room)
+                                .FirstOrDefault(c => c.ComplaintID == id);
+
             if (value == null)
             {
                 var response = new ApiResponse<Complaint>(false, "Complaint not found", null);

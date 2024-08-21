@@ -1,44 +1,52 @@
 ﻿using AllinLobby.Bussiness.Abstract;
+using AllinLobby.DataAccess.Context;
 using AllinLobby.DTO.DTOs.MessageDtos;
 using AllinLobby.Entity.Entities;
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace AllinLobby.Api.Controllers
 {
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class MessagesController(IGenericService<Message> _messageService, IMapper _mapper, IGenericService<Session> _sessionService) : ControllerBase
+    public class MessagesController(IGenericService<Message> _messageService, IMapper _mapper, AllinLobbyContext _context) : ControllerBase
     {
         [HttpGet]
         public IActionResult Get()
         {
-            var values = _messageService.TGetList();
-            var response = new ApiResponse<IEnumerable<Message>>(true, "Data retrieved successfully", values);
+            var messages = _context.Messages
+                                   .Include(m => m.Session) // Include related Session
+                                   .ToList();
+
+            var response = new ApiResponse<IEnumerable<Message>>(true, "Data retrieved successfully", messages);
             return Ok(response);
         }
 
         [HttpGet("{id}")]
         public IActionResult GetById(int id)
         {
-            var value = _messageService.TGetById(id);
-            if (value == null)
+            var message = _context.Messages
+                                  .Include(m => m.Session) // Include related Session
+                                  .FirstOrDefault(m => m.MessageId == id);
+
+            if (message == null)
             {
                 var response = new ApiResponse<Message>(false, "Message not found", null);
                 return NotFound(response);
             }
 
-            var successResponse = new ApiResponse<Message>(true, "Message retrieved successfully", value);
+            var successResponse = new ApiResponse<Message>(true, "Message retrieved successfully", message);
             return Ok(successResponse);
         }
 
         [HttpDelete("{id}")]
         public IActionResult Delete(int id)
         {
-            var value = _messageService.TGetById(id);
-            if (value == null)
+            var message = _messageService.TGetById(id);
+            if (message == null)
             {
                 var response = new ApiResponse<Message>(false, "Message not found", null);
                 return NotFound(response);
@@ -58,10 +66,10 @@ namespace AllinLobby.Api.Controllers
                 return BadRequest(response);
             }
 
-            var newValue = _mapper.Map<Message>(createMessageDto);
-            _messageService.TCreate(newValue);
+            var newMessage = _mapper.Map<Message>(createMessageDto);
+            _messageService.TCreate(newMessage);
 
-            var successResponse = new ApiResponse<Message>(true, "Message created successfully", newValue);
+            var successResponse = new ApiResponse<Message>(true, "Message created successfully", newMessage);
             return Ok(successResponse);
         }
 
@@ -93,8 +101,9 @@ namespace AllinLobby.Api.Controllers
         {
             try
             {
-                var session = _sessionService.TGetList()
-                    .FirstOrDefault(s => s.ReservationId == reservationId && s.ClientId == clientId);
+                var session = _context.Sessions
+                                      .Include(s => s.Messages) // Include related Messages
+                                      .FirstOrDefault(s => s.ReservationId == reservationId && s.ClientId == clientId);
 
                 if (session == null)
                 {
@@ -106,10 +115,7 @@ namespace AllinLobby.Api.Controllers
                 }
 
                 var sessionId = session.SessionId;
-
-                var messages = _messageService.TGetList()
-                    .Where(m => m.SessionId == sessionId)
-                    .ToList();
+                var messages = session.Messages.ToList();
 
                 if (messages.Any())
                 {
@@ -129,7 +135,7 @@ namespace AllinLobby.Api.Controllers
                         status = true,
                         message = "No messages found for this reservation and session",
                         sessionId = sessionId,
-                        messages = new List<Message>() 
+                        messages = new List<Message>()
                     };
                     return Ok(response);
                 }
@@ -144,6 +150,5 @@ namespace AllinLobby.Api.Controllers
                 return StatusCode(500, errorResponse);
             }
         }
-
     }
 }
